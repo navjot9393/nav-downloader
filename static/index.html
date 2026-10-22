@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1116" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nav Downloader">
+<title>Nav Downloader</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="app.webmanifest">
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true">
+  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M12 3v11m0 0-4.5-4.5M12 14l4.5-4.5M5 17v1.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0M12 16l4-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18.5" cy="12" r="1.8" fill="currentColor"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2.2h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-queue" viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12m0 0-5-5m5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<!-- Sign in / first-time password -->
+<div id="auth" class="auth" hidden>
+  <form id="auth-form" class="auth-card" novalidate>
+    <div class="brand big"><svg class="logo"><use href="#i-logo"/></svg><span>Nav Downloader</span></div>
+    <h1 id="auth-title">Sign in</h1>
+    <p id="auth-hint" class="muted"></p>
+    <div id="auth-code-row" class="code-box" hidden>
+      <p class="small">The code is in the Nav Downloader container's log. On the server run:</p>
+      <code class="cmd">docker logs nav-downloader</code>
+      <p class="small muted">or open the container's logs in Portainer, TrueNAS, Unraid or Synology. Use the newest code.</p>
+      <label class="field">
+        <span id="auth-code-label">Code from the log</span>
+        <input id="auth-code" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH">
+      </label>
+    </div>
+    <label class="field">
+      <span id="auth-password-label">Password</span>
+      <input id="auth-password" type="password" autocomplete="current-password" required>
+    </label>
+    <label class="field" id="auth-confirm-row" hidden>
+      <span>Repeat password</span>
+      <input id="auth-confirm" type="password" autocomplete="new-password">
+    </label>
+    <p id="auth-error" class="form-error" role="alert"></p>
+    <button class="btn primary wide" type="submit" id="auth-submit">Sign in</button>
+    <div class="auth-links">
+      <button type="button" id="auth-forgot" class="link-btn">Forgot password?</button>
+      <button type="button" id="auth-newcode" class="link-btn" hidden>Get a new code</button>
+      <button type="button" id="auth-back" class="link-btn" hidden>Back to sign in</button>
+    </div>
+  </form>
+</div>
+
+<!-- Main app -->
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><svg class="logo"><use href="#i-logo"/></svg><span>Nav Downloader</span></div>
+      <div class="status" id="status">
+        <span id="state-chip" class="chip">…</span>
+        <span id="speed" class="speed"></span>
+      </div>
+      <div class="controls">
+        <button id="btn-main" class="btn primary" type="button"><svg><use href="#i-play"/></svg><span>Start</span></button>
+        <button id="btn-stop" class="btn" type="button" title="Stop all downloads"><svg><use href="#i-stop"/></svg><span class="hide-sm">Stop</span></button>
+        <button id="btn-limit" class="btn" type="button" title="Speed limit"><svg><use href="#i-gauge"/></svg><span id="limit-label">No limit</span></button>
+        <button id="btn-menu" class="btn icon" type="button" aria-label="Account menu"><svg><use href="#i-more"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" role="status" hidden></div>
+
+  <main class="wrap">
+    <!-- Shown instead of the lists while JDownloader's API can't be reached -->
+    <section id="connect" class="card connect" hidden>
+      <h2>Connect to JDownloader</h2>
+      <p id="connect-status" class="muted"></p>
+      <ol class="steps">
+        <li>
+          <strong>Turn on JDownloader's local API</strong>, using any one of these:
+          <details open>
+            <summary>In JDownloader's settings (My.JDownloader or its own window)</summary>
+            <p>Settings → Advanced Settings → search <code>DeprecatedApi</code>. Tick <em>RemoteAPI: Deprecated Api Enabled</em>, leave <em>Deprecated Api Localhost Only</em> ticked, then restart JDownloader.</p>
+          </details>
+          <details>
+            <summary>With one command</summary>
+            <p>Stop JDownloader, run this with your JDownloader config folder, then start JDownloader:</p>
+            <code class="cmd" id="connect-cmd"></code>
+          </details>
+          <details>
+            <summary>By hand</summary>
+            <p>Stop JDownloader. In its <code>cfg</code> folder, open <code>org.jdownloader.api.RemoteAPIConfig.json</code> and set:</p>
+            <code class="cmd">"deprecatedapienabled": true,
+"deprecatedapilocalhostonly": true,
+"deprecatedapiport": 3128</code>
+            <p>Then start JDownloader.</p>
+          </details>
+        </li>
+        <li>
+          <strong>Share JDownloader's network.</strong> The API only answers on JDownloader's own localhost, so Nav Downloader has to run inside JDownloader's network: in Docker Compose <code>network_mode: service:jdownloader</code>, or <code>docker run --network container:jdownloader</code>. Publish Nav Downloader's port on the JDownloader container.
+        </li>
+      </ol>
+      <div class="connect-actions">
+        <button id="connect-check" class="btn primary" type="button">Check again</button>
+      </div>
+    </section>
+
+    <section id="add-card" class="card">
+      <form id="add-form">
+        <label class="sr-only" for="add-links">Links</label>
+        <textarea id="add-links" rows="2" placeholder="Paste links here, one per line" spellcheck="false" autocapitalize="off"></textarea>
+        <div class="save-to">
+          <span class="save-label">Save to</span>
+          <button type="button" id="folder-btn" class="folder-btn">
+            <svg class="ico"><use href="#i-folder"/></svg>
+            <span id="folder-label" class="clip">Downloads</span>
+            <svg class="chev"><use href="#i-chev"/></svg>
+          </button>
+        </div>
+        <div id="add-extra" class="add-extra" hidden>
+          <input id="add-package" placeholder="Package name (optional)" autocomplete="off">
+          <input id="add-password" placeholder="Archive password (optional)" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="add-row">
+          <label class="switch">
+            <input type="checkbox" id="add-autostart" checked>
+            <span class="track" aria-hidden="true"></span>
+            <span>Start right away</span>
+          </label>
+          <button type="button" id="add-more" class="link-btn">More options</button>
+          <button class="btn primary" type="submit" id="add-submit"><svg><use href="#i-down"/></svg><span>Add</span></button>
+        </div>
+      </form>
+    </section>
+
+    <section id="grabber" class="card" hidden>
+      <div class="section-head">
+        <h2>Link grabber <span id="grabber-count" class="count"></span></h2>
+        <div class="head-actions">
+          <button id="grabber-download-all" class="btn primary small" type="button">Download all</button>
+          <button id="grabber-clear" class="btn small" type="button">Clear</button>
+        </div>
+      </div>
+      <p id="grabber-collecting" class="collecting" hidden><span class="spinner"></span><span id="grabber-collecting-text">Checking links…</span></p>
+      <ul id="grabber-list" class="list"></ul>
+    </section>
+
+    <section id="dl-card" class="card">
+      <div class="section-head">
+        <h2>Downloads <span id="dl-count" class="count"></span></h2>
+        <div class="head-actions">
+          <button id="dl-max" class="btn small" type="button" title="How many files download at the same time"><svg><use href="#i-queue"/></svg><span id="dl-max-label">…</span></button>
+          <button id="dl-clear-finished" class="btn small" type="button">Clear finished</button>
+        </div>
+      </div>
+      <ul id="dl-list" class="list"></ul>
+      <p id="dl-empty" class="empty" hidden>Nothing here yet. Paste a link above to start.</p>
+    </section>
+  </main>
+</div>
+
+<!-- Speed limit -->
+<dialog id="dlg-limit" class="sheet">
+  <form method="dialog" id="limit-form">
+    <h3>Speed limit</h3>
+    <div class="choices" id="limit-choices"></div>
+    <label class="field inline">
+      <span>Custom</span>
+      <input id="limit-custom" type="number" min="0.1" step="0.1" inputmode="decimal" placeholder="e.g. 7.5">
+      <span class="unit">MB/s</span>
+    </label>
+    <div class="dialog-actions">
+      <button class="btn" value="cancel" type="submit">Cancel</button>
+      <button class="btn primary" value="save" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Downloads at a time -->
+<dialog id="dlg-max" class="sheet">
+  <form method="dialog">
+    <h3>Downloads at a time</h3>
+    <p class="muted small">How many files download at the same time. The rest wait in the queue and start as others finish. “Start now” on a file skips the queue.</p>
+    <div class="choices five" id="max-choices"></div>
+    <div class="dialog-actions">
+      <button class="btn" value="cancel" type="submit">Cancel</button>
+      <button class="btn primary" value="save" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Folder picker -->
+<dialog id="dlg-folder" class="sheet">
+  <form method="dialog" id="folder-form">
+    <h3 id="folder-title">Save to</h3>
+    <input id="folder-search" type="search" placeholder="Search folders" autocomplete="off" spellcheck="false">
+    <nav id="folder-crumbs" class="crumbs" aria-label="Folder path"></nav>
+    <ul id="folder-list" class="folder-list"></ul>
+    <p id="folder-empty" class="muted small folder-empty" hidden></p>
+    <label class="field new-folder">
+      <span>New folder inside this one (optional)</span>
+      <input id="folder-new" placeholder="e.g. Season 2" autocomplete="off" spellcheck="false">
+    </label>
+    <p class="muted small">Each package goes into its own sub-folder here. New folders show up within a minute.</p>
+    <div class="dialog-actions">
+      <button class="btn" value="cancel" type="submit">Cancel</button>
+      <button class="btn primary" value="choose" type="submit" id="folder-choose">Save here</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Item actions -->
+<dialog id="dlg-item" class="sheet">
+  <form method="dialog">
+    <h3 id="item-title" class="clip"></h3>
+    <p id="item-sub" class="muted small"></p>
+    <div class="menu" id="item-menu"></div>
+    <div class="dialog-actions"><button class="btn" value="cancel" type="submit">Close</button></div>
+  </form>
+</dialog>
+
+<!-- Remove confirmation -->
+<dialog id="dlg-remove" class="sheet">
+  <form method="dialog">
+    <h3>Remove download?</h3>
+    <p id="remove-text" class="muted"></p>
+    <label class="check"><input type="checkbox" id="remove-files"> Also delete the downloaded files</label>
+    <div class="dialog-actions">
+      <button class="btn" value="cancel" type="submit">Cancel</button>
+      <button class="btn danger" value="remove" type="submit">Remove</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Account -->
+<dialog id="dlg-account" class="sheet">
+  <form method="dialog" id="account-form">
+    <h3>Account</h3>
+    <p id="pw-managed" class="muted small" hidden>The password is set with <code>JDWEB_PASSWORD</code>. To change it, change that setting and restart the container.</p>
+    <div id="pw-fields">
+      <label class="field"><span>Current password</span><input id="pw-current" type="password" autocomplete="current-password"></label>
+      <label class="field"><span>New password</span><input id="pw-new" type="password" autocomplete="new-password"></label>
+      <label class="field"><span>Repeat new password</span><input id="pw-repeat" type="password" autocomplete="new-password"></label>
+      <p id="pw-error" class="form-error" role="alert"></p>
+    </div>
+    <div class="dialog-actions split">
+      <button class="btn danger-text" value="logout" type="submit">Sign out</button>
+      <span class="spacer"></span>
+      <button class="btn" value="cancel" type="submit">Close</button>
+      <button class="btn primary" value="change" type="submit" id="pw-change">Change password</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

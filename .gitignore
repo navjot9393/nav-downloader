@@ -1,0 +1,6 @@
+# Local preview data: throwaway password hashes and session keys
+dev/.data*/
+
+__pycache__/
+*.pyc
+.DS_Store

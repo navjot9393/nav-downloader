@@ -1,0 +1,73 @@
+# Nav Downloader + JDownloader 2.
+#
+#   docker compose up -d
+#   docker compose logs nav-downloader      <- the setup code for the first visit
+#
+# Then open http://<this-machine>:30500. Downloads land in ./downloads.
+# PUID / PGID / TZ can go in a .env file next to this one.
+
+services:
+  # Before JDownloader starts (both run once and exit, on every `up`):
+  # 1. on a new install, put the image's default settings in place, as its own
+  #    start-up would (it only does that while cfg/ is missing);
+  jd-defaults:
+    image: jlesage/jdownloader-2
+    entrypoint: ["sh", "-c", "[ -d /config/cfg ] || cp -r /defaults/cfg /config/cfg"]
+    volumes:
+      - ./jdownloader:/config
+    restart: "no"
+
+  # 2. switch on JDownloader's local API (and a 1 s auto-start delay).
+  jd-setup:
+    image: ${NAV_IMAGE:-ghcr.io/navjot9393/nav-downloader:latest}
+    depends_on:
+      jd-defaults:
+        condition: service_completed_successfully
+    user: "0:0"
+    command: ["setup-jd", "/jd"]
+    volumes:
+      - ./jdownloader:/jd
+    restart: "no"
+
+  jdownloader:
+    image: jlesage/jdownloader-2
+    depends_on:
+      jd-setup:
+        condition: service_completed_successfully
+    environment:
+      USER_ID: "${PUID:-1000}"
+      GROUP_ID: "${PGID:-1000}"
+      TZ: "${TZ:-Etc/UTC}"
+    ports:
+      - "30500:30500"   # Nav Downloader (it lives in this container's network)
+      - "5800:5800"     # JDownloader's own web GUI: captchas and settings. Optional.
+    volumes:
+      - ./jdownloader:/config
+      - ./downloads:/output
+    restart: unless-stopped
+
+  nav-downloader:
+    image: ${NAV_IMAGE:-ghcr.io/navjot9393/nav-downloader:latest}
+    container_name: nav-downloader
+    # JDownloader's API only answers on its own localhost, so share its network.
+    network_mode: service:jdownloader
+    depends_on:
+      - jdownloader
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      TZ: "${TZ:-Etc/UTC}"
+      # Folders offered under "Save to", as JDownloader sees them. Mount each one
+      # below at the same path (read-only is enough) so their sub-folders show up.
+      JDWEB_FOLDERS: "Downloads=/output"
+      # JDWEB_PASSWORD: "set it here instead of on the first visit"
+      # JDWEB_TRUST_PROXY: "1"    # behind a reverse proxy (Caddy, Traefik, nginx...)
+    volumes:
+      - nav-data:/data
+      - ./downloads:/output:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+volumes:
+  nav-data:

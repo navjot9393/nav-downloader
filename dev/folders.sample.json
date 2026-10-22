@@ -1,0 +1,12 @@
+{
+  "generated": 1792400000,
+  "default": "/output",
+  "roots": [
+    {"label": "Downloads", "path": "/output", "host": "", "default": true,
+     "dirs": ["Big.Buck.Bunny.2160p.HDR", "Ubuntu 26.04 Desktop ISO"]},
+    {"label": "Movies", "path": "/movies", "host": "", "default": false,
+     "dirs": ["4K", "4K/Nature", "Classics", "Documentaries", "Documentaries/Space"]},
+    {"label": "TV", "path": "/tv", "host": "", "default": false,
+     "dirs": ["Series A", "Series A/Season 1", "Series A/Season 2", "Series B"]}
+  ]
+}
