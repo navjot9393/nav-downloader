@@ -1,5 +1,5 @@
 # Nav Downloader: a web UI for a headless JDownloader 2. Standard library Python only.
-FROM python:3.13-alpine@sha256:c50ccfb66e5cc97a610dcd0b9597de6ef5b52c96280b51997b353a0fc87a8361
+FROM python:3.15-alpine@sha256:0f9552bb28711333da16915ec146f5e6bb44a7fdac9ced15dc17c2e0206346dd
 
 # The published name, shown in the page's setup instructions (the release workflow sets it).
 ARG IMAGE_NAME=nav-downloader
